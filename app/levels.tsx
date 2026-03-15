@@ -1,25 +1,84 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, Animated, Dimensions, FlatList, ImageBackground } from 'react-native';
+import {
+    View,
+    Text,
+    StyleSheet,
+    Pressable,
+    Animated,
+    Dimensions,
+    FlatList,
+    ImageBackground,
+} from 'react-native';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, TrendingUp, Trees, Cloud, Mountain, Sun, Snowflake, Star, Shield, Flame } from 'lucide-react-native';
+import { ArrowLeft, Trees, Sun, Snowflake, Star, Flame, Cherry } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Svg, { Path, Circle } from 'react-native-svg';
+import Svg, { Path, Defs, LinearGradient as SvgGrad, Stop, Circle, Rect } from 'react-native-svg';
 import { LevelCard } from '../components/LevelCard';
 import { useGame } from '../context/GameContext';
 
-// Biome Definitions
+// Enhanced Biome Definitions with richer theming
 const BIOMES = [
-    { name: 'Grassland', bg: '#F5F7FF', pathColor: 'rgba(74, 108, 247, 0.4)', icon: Trees, iconColor: '#A7F3D0' },
-    { name: 'Desert', bg: '#FEF3C7', pathColor: 'rgba(217, 119, 6, 0.4)', icon: Sun, iconColor: '#FDE68A' },
-    { name: 'Snow', bg: '#E0F2FE', pathColor: 'rgba(56, 189, 248, 0.4)', icon: Snowflake, iconColor: '#BAE6FD' },
-    { name: 'Candy', bg: '#FCE7F3', pathColor: 'rgba(219, 39, 119, 0.4)', icon: Star, iconColor: '#FBCFE8' },
-    { name: 'Volcano', bg: '#FEE2E2', pathColor: 'rgba(220, 38, 38, 0.4)', icon: Flame, iconColor: '#FECACA' }
+    {
+        name: 'Enchanted Forest',
+        pathColor: 'rgba(200, 133, 74, 0.6)',
+        dotColor: 'rgba(255, 216, 100, 0.7)',
+        icon: Trees,
+        iconColor: '#6DFFAA',
+        accentColor: '#4DFF88',
+        nodeGrad: ['#38D47A', '#1A8C4A'] as const,
+        nodeShadow: '#0D5C2A',
+        badge: '🌲',
+    },
+    {
+        name: 'Sahara Desert',
+        pathColor: 'rgba(200, 133, 74, 0.6)',
+        dotColor: 'rgba(255, 216, 100, 0.7)',
+        icon: Sun,
+        iconColor: '#FFD864',
+        accentColor: '#FFB800',
+        nodeGrad: ['#FFB800', '#CC7800'] as const,
+        nodeShadow: '#7A4200',
+        badge: '🌵',
+    },
+    {
+        name: 'Frozen Tundra',
+        pathColor: 'rgba(200, 133, 74, 0.6)',
+        dotColor: 'rgba(255, 216, 100, 0.7)',
+        icon: Snowflake,
+        iconColor: '#A0D8FF',
+        accentColor: '#60B8FF',
+        nodeGrad: ['#6CC8FF', '#3A88CC'] as const,
+        nodeShadow: '#1A5090',
+        badge: '❄️',
+    },
+    {
+        name: 'Candy Kingdom',
+        pathColor: 'rgba(200, 133, 74, 0.6)',
+        dotColor: 'rgba(255, 216, 100, 0.7)',
+        icon: Cherry,
+        iconColor: '#FF8AE0',
+        accentColor: '#FF55CC',
+        nodeGrad: ['#FF70D8', '#CC30A0'] as const,
+        nodeShadow: '#8A1060',
+        badge: '🍭',
+    },
+    {
+        name: 'Volcano Island',
+        pathColor: 'rgba(200, 133, 74, 0.6)',
+        dotColor: 'rgba(255, 216, 100, 0.7)',
+        icon: Flame,
+        iconColor: '#FF7A30',
+        accentColor: '#FF5500',
+        nodeGrad: ['#FF6A20', '#CC3800'] as const,
+        nodeShadow: '#8A2000',
+        badge: '🌋',
+    },
 ];
 
 const { width } = Dimensions.get('window');
-const MAP_PADDING = 40;
-const NODE_SIZE = 64;
-const VERTICAL_SPACING = 100;
+const MAP_PADDING = 44;
+const NODE_SIZE = 68;
+const VERTICAL_SPACING = 110;
 const SINE_AMPLITUDE = (width - MAP_PADDING * 2 - NODE_SIZE) / 2;
 
 export default function LevelSelectScreen() {
@@ -27,111 +86,128 @@ export default function LevelSelectScreen() {
     const { progress } = useGame();
     const totalLevels = 2000;
 
-    // Ordered levels where Level 1 is rendered at the bottom
     const levels = Array.from({ length: totalLevels }, (_, i) => i + 1);
-
     const flatListRef = useRef<FlatList>(null);
-    const progressBarAnim = useRef(new Animated.Value(0)).current;
+    const headerFadeAnim = useRef(new Animated.Value(0)).current;
+    const headerSlideAnim = useRef(new Animated.Value(-20)).current;
 
-    // Calculate Coordinates based on index
     const getLevelPositionX = (index: number) => {
-        const frequency = 0.5;
-        const xOffset = width / 2 - (NODE_SIZE / 2);
+        const frequency = 0.48;
+        const xOffset = width / 2 - NODE_SIZE / 2;
         return xOffset + Math.sin(index * frequency) * SINE_AMPLITUDE;
     };
 
-    // Render path fragment
     const renderPathSegment = (index: number, biome: typeof BIOMES[0]) => {
-        if (index === 0) return null;
+        if (index >= totalLevels - 1) return null;
 
-        const prevX = getLevelPositionX(index - 1) + NODE_SIZE / 2;
         const currentX = getLevelPositionX(index) + NODE_SIZE / 2;
+        const nextX = getLevelPositionX(index + 1) + NODE_SIZE / 2;
 
         const startY = VERTICAL_SPACING;
-        const startX = prevX;
         const endY = 0;
-        const endX = currentX;
 
-        const c1X = startX;
+        const c1X = currentX;
         const c1Y = startY - VERTICAL_SPACING / 2;
-        const c2X = endX;
+        const c2X = nextX;
         const c2Y = endY + VERTICAL_SPACING / 2;
 
-        const d = `M ${startX} ${startY} C ${c1X} ${c1Y}, ${c2X} ${c2Y}, ${endX} ${endY}`;
+        const d = `M ${currentX} ${startY} C ${c1X} ${c1Y}, ${c2X} ${c2Y}, ${nextX} ${endY}`;
 
-        // Dots line underneath to enhance path texture
         return (
-            <View style={StyleSheet.absoluteFill}>
-                <Svg width={width} height={VERTICAL_SPACING} style={{ position: 'absolute', top: NODE_SIZE / 2, left: 0 }}>
-                    <Path d={d} stroke={biome.pathColor} strokeWidth="24" strokeLinecap="round" fill="none" />
-                    <Path d={d} stroke="rgba(255, 255, 255, 0.8)" strokeWidth="12" strokeLinecap="round" strokeDasharray="1, 24" fill="none" />
+            <View style={[StyleSheet.absoluteFill, { zIndex: -1 }]} pointerEvents="none">
+                <Svg width={width} height={VERTICAL_SPACING} style={{ position: 'absolute', top: -VERTICAL_SPACING + NODE_SIZE / 2, left: 0 }}>
+                    {/* Thick glow path */}
+                    <Path d={d} stroke={biome.pathColor} strokeWidth="28" strokeLinecap="round" fill="none" />
+                    {/* White dash center */}
+                    <Path d={d} stroke="rgba(255,255,255,0.55)" strokeWidth="10" strokeLinecap="round"
+                        strokeDasharray="4, 20" fill="none" />
+                    {/* Bright dot highlights */}
+                    <Path d={d} stroke={biome.dotColor} strokeWidth="3" strokeLinecap="round"
+                        strokeDasharray="1, 14" fill="none" />
                 </Svg>
             </View>
         );
     };
 
-    // Animate progress bar fill
     useEffect(() => {
-        const fraction = Math.min(progress.completedLevels.length / totalLevels, 1);
-        Animated.timing(progressBarAnim, {
-            toValue: fraction,
-            duration: 1000,
-            useNativeDriver: false,
-        }).start();
+        // Animate header in
+        Animated.parallel([
+            Animated.timing(headerFadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
+            Animated.spring(headerSlideAnim, { toValue: 0, friction: 8, tension: 50, useNativeDriver: true }),
+        ]).start();
 
         setTimeout(() => {
             if (flatListRef.current) {
                 const targetIndex = Math.max(0, progress.currentLevel - 1);
                 flatListRef.current.scrollToIndex({ index: targetIndex, animated: true, viewPosition: 0.5 });
             }
-        }, 500);
-    }, [progress.currentLevel, progress.completedLevels.length, progressBarAnim]);
-
-    const progressBarWidth = progressBarAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: ['0%', '100%'],
-    });
+        }, 600);
+    }, [progress.currentLevel]);
 
     const renderItem = ({ item, index }: { item: number; index: number }) => {
         const isCompleted = progress.completedLevels.includes(item);
         const isLocked = item > progress.currentLevel;
         const x = getLevelPositionX(index);
 
-        // 20 levels per zone biome
         const zoneIndex = Math.floor((item - 1) / 20);
         const biome = BIOMES[zoneIndex % BIOMES.length];
         const BiomeIcon = biome.icon;
 
-        // Decorative scatter based on odd/even to appear on opposite sides of the sine wave
+        // Decorative icons alternate sides
         const isLeftCurve = x < width / 2 - NODE_SIZE / 2;
-        const decorX = isLeftCurve ? width - 80 : 20;
-        const showDecor = index % 3 === 0 && index !== 0;
+        const decorX = isLeftCurve ? width - 80 : 16;
+        const showDecor = index % 4 === 2 && index !== 0;
+        const showMilestone = item % 10 === 0; // Every 10th level gets a star milestone
 
         return (
-            <View style={{ height: VERTICAL_SPACING, width, backgroundColor: 'transparent' }}>
+            <View style={{ height: VERTICAL_SPACING, width, backgroundColor: 'transparent', zIndex: index }}>
                 {renderPathSegment(index, biome)}
 
-                {/* Decorative Elements */}
+                {/* Biome decorative icon */}
                 {showDecor && (
-                    <View style={{ position: 'absolute', left: decorX, top: VERTICAL_SPACING / 3, opacity: 0.7 }}>
-                        <BiomeIcon size={48} color={biome.iconColor} strokeWidth={1.5} />
+                    <View style={{ position: 'absolute', left: decorX, top: VERTICAL_SPACING / 3, zIndex: 2 }}>
+                        <View style={[styles.decorIconBg, { backgroundColor: `${biome.accentColor}22` }]}>
+                            <BiomeIcon size={32} color={biome.iconColor} strokeWidth={1.5} />
+                        </View>
                     </View>
                 )}
 
-                <View style={[styles.nodeWrapper, { left: x, top: 0 }]}>
+                {/* Milestone ring for every 10th level */}
+                {showMilestone && !isLocked && (
+                    <View style={[styles.milestoneRing, {
+                        left: x - 6,
+                        top: -6,
+                        borderColor: biome.accentColor,
+                        shadowColor: biome.accentColor,
+                        zIndex: 3,
+                    }]} />
+                )}
+
+                <View style={[styles.nodeWrapper, { left: x, top: 0, zIndex: 10 }]}>
                     <LevelCard
                         level={item}
                         isLocked={isLocked}
                         isCompleted={isCompleted}
                         onPress={() => router.push(`/game?id=${item}`)}
+                        biomeAccent={biome.accentColor}
+                        biomeNodeGrad={biome.nodeGrad}
+                        biomeNodeShadow={biome.nodeShadow}
                     />
                 </View>
             </View>
         );
     };
 
+    // Current zone for header
+    const currentZoneIndex = Math.floor((progress.currentLevel - 1) / 20);
+    const currentBiome = BIOMES[currentZoneIndex % BIOMES.length];
+
     return (
-        <ImageBackground source={require('../assets/orange-wall-bg.jpg')} style={styles.container} resizeMode="cover">
+        <View style={styles.container}>
+            <ImageBackground source={require('../assets/orange-wall-bg.jpg')} style={StyleSheet.absoluteFill} resizeMode="cover" />
+            {/* Consistent dark wood overlay - no more biome-color tint */}
+            <View style={styles.woodOverlay} />
+
             <FlatList
                 ref={flatListRef}
                 data={levels}
@@ -139,7 +215,7 @@ export default function LevelSelectScreen() {
                 renderItem={renderItem}
                 inverted
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.scrollContent}
+                contentContainerStyle={[styles.scrollContent, { paddingTop: 160 }]}
                 getItemLayout={(data, index) => ({
                     length: VERTICAL_SPACING,
                     offset: VERTICAL_SPACING * index,
@@ -147,121 +223,166 @@ export default function LevelSelectScreen() {
                 })}
                 initialScrollIndex={Math.max(0, progress.currentLevel - 1)}
                 onScrollToIndexFailed={(info) => {
-                    const wait = new Promise(resolve => setTimeout(resolve, 500));
-                    wait.then(() => {
+                    setTimeout(() => {
                         flatListRef.current?.scrollToIndex({ index: info.index, animated: true });
-                    });
+                    }, 500);
                 }}
             />
 
-            {/* Header - Absolute Positioned to float over map */}
-            <View style={styles.headerContainer}>
+            {/* Floating Header with wood style */}
+            <Animated.View style={[styles.headerContainer, {
+                opacity: headerFadeAnim,
+                transform: [{ translateY: headerSlideAnim }]
+            }]}>
+                <LinearGradient
+                    colors={['#8B4F1E', '#7A3F10', 'rgba(80, 40, 10, 0)']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 0, y: 1 }}
+                    style={StyleSheet.absoluteFill}
+                />
+                {/* Wood edge shimmer */}
+                <View style={styles.headerShine} />
+
                 <View style={styles.header}>
                     <Pressable
                         onPress={() => router.back()}
                         style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
                     >
-                        <ArrowLeft size={24} color="#4A6CF7" />
+                        <ArrowLeft size={22} color="#FFD864" strokeWidth={2.5} />
                     </Pressable>
-                    <Text style={styles.headerTitle}>Journey Map</Text>
-                    <View style={styles.spacer} />
+
+                    <View style={styles.headerCenter}>
+                        <Text style={styles.biomeEmoji}>{currentBiome.badge}</Text>
+                        <View>
+                            <Text style={styles.headerTitle}>Journey Map</Text>
+                            <Text style={[styles.biomeName, { color: currentBiome.accentColor }]}>
+                                {currentBiome.name}
+                            </Text>
+                        </View>
+                    </View>
+
+                    {/* Level progress chip */}
+                    <View style={[styles.levelChip, { borderColor: currentBiome.accentColor }]}>
+                        <Text style={[styles.levelChipNum, { color: currentBiome.accentColor }]}>
+                            {progress.currentLevel}
+                        </Text>
+                        <Text style={styles.levelChipLabel}> / {totalLevels}</Text>
+                    </View>
                 </View>
 
-            </View>
-        </ImageBackground>
+                {/* Mini progress bar */}
+                <View style={styles.miniProgressBg}>
+                    <View style={[styles.miniProgressFill, {
+                        width: `${(progress.currentLevel / totalLevels) * 100}%`,
+                        backgroundColor: currentBiome.accentColor,
+                    }]} />
+                </View>
+            </Animated.View>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        backgroundColor: '#2A1200',
+    },
+    woodOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(15, 5, 0, 0.55)',
     },
     headerContainer: {
         position: 'absolute',
         top: 0,
         left: 0,
         right: 0,
-        zIndex: 10,
-        paddingTop: 60,
-        paddingHorizontal: 24,
-        backgroundColor: 'rgba(245, 247, 255, 0.9)', // Slight transparency
+        zIndex: 100,
+        paddingTop: 52,
+        paddingHorizontal: 16,
+        paddingBottom: 12,
+        overflow: 'hidden',
+    },
+    headerShine: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 1.5,
+        backgroundColor: 'rgba(255, 220, 160, 0.3)',
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: 20,
+        marginBottom: 10,
     },
     backButton: {
-        width: 48,
-        height: 48,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 24,
+        width: 44,
+        height: 44,
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        borderRadius: 14,
+        borderWidth: 1.5,
+        borderColor: 'rgba(255,216,100,0.35)',
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 10,
-        elevation: 3,
     },
     backButtonPressed: {
         transform: [{ scale: 0.9 }],
     },
+    headerCenter: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+    },
+    biomeEmoji: {
+        fontSize: 32,
+    },
     headerTitle: {
-        fontSize: 28,
-        fontWeight: 'bold',
-        color: '#4A6CF7',
+        fontSize: 20,
+        fontWeight: '900',
+        color: '#F5DEB3',
+        letterSpacing: 1,
+        textShadowColor: 'rgba(0,0,0,0.6)',
+        textShadowOffset: { width: 0, height: 2 },
+        textShadowRadius: 4,
     },
-    spacer: {
-        width: 48,
+    biomeName: {
+        fontSize: 12,
+        fontWeight: '700',
+        letterSpacing: 0.5,
+        textTransform: 'uppercase',
     },
-    progressContainer: {
-        backgroundColor: '#FFFFFF',
-        padding: 16,
-        borderRadius: 20,
-        marginBottom: 24,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-        elevation: 2,
-    },
-    progressHeader: {
+    levelChip: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 12,
+        alignItems: 'baseline',
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        borderRadius: 12,
+        borderWidth: 1.5,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
     },
-    progressLabel: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
+    levelChipNum: {
+        fontSize: 18,
+        fontWeight: '900',
     },
-    progressText: {
-        fontSize: 16,
-        color: '#374151',
+    levelChipLabel: {
+        fontSize: 11,
+        color: '#F5DEB3',
         fontWeight: '600',
-        marginLeft: 8,
+        opacity: 0.75,
     },
-    progressValue: {
-        fontSize: 16,
-        color: '#4A6CF7',
-        fontWeight: 'bold',
-    },
-    progressBarBg: {
-        height: 12,
-        backgroundColor: '#E5E7EB',
-        borderRadius: 6,
+    miniProgressBg: {
+        height: 5,
+        backgroundColor: 'rgba(255,255,255,0.12)',
+        borderRadius: 3,
         overflow: 'hidden',
+        marginTop: 2,
     },
-    progressBarFill: {
+    miniProgressFill: {
         height: '100%',
-        borderRadius: 6,
-        overflow: 'hidden',
+        borderRadius: 3,
     },
     scrollContent: {
-        paddingTop: 240, // Space for the floating header
         paddingBottom: 40,
     },
     nodeWrapper: {
@@ -270,5 +391,24 @@ const styles = StyleSheet.create({
         height: NODE_SIZE,
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    decorIconBg: {
+        width: 52,
+        height: 52,
+        borderRadius: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    milestoneRing: {
+        position: 'absolute',
+        width: NODE_SIZE + 12,
+        height: NODE_SIZE + 12,
+        borderRadius: (NODE_SIZE + 12) / 2,
+        borderWidth: 3,
+        borderStyle: 'dashed',
+        shadowOpacity: 0.5,
+        shadowRadius: 8,
+        shadowOffset: { width: 0, height: 0 },
+        elevation: 5,
     },
 });

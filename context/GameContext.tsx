@@ -12,11 +12,13 @@ interface GameContextType {
     claimDailyReward: (rewardType: 'coins' | 'hint' | 'skip' | 'extraBottle' | 'mystery', amount: number) => void;
     addCoins: (amount: number) => void;
     spendCoins: (amount: number) => boolean;
+    addBoosters: (type: 'hints' | 'skips' | 'extraBottles', amount: number) => void;
     skipLevel: () => boolean;
     isLoaded: boolean;
     completeDailyChallenge: () => void;
     unlockTheme: (themeId: string, cost: number) => boolean;
     setActiveTheme: (themeId: string) => void;
+    setCountry: (country: string) => void;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -41,6 +43,7 @@ const defaultProgress: GameProgress = {
     rewardClaimedToday: false,
     unlockedThemes: ['glass'],
     activeTheme: 'glass',
+    country: undefined,
 };
 
 export function GameProvider({ children }: { children: React.ReactNode }) {
@@ -119,6 +122,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         });
     };
 
+    // useHint: use stock first, then spend 30 coins as fallback
     const useHint = () => {
         if (progress.boosters.hints > 0) {
             setProgress(prev => ({
@@ -127,9 +131,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             }));
             return true;
         }
+        // Fallback: buy with coins
+        if (progress.coins >= 30) {
+            setProgress(prev => ({ ...prev, coins: prev.coins - 30 }));
+            return true;
+        }
         return false;
     };
 
+    // useSkip: use stock first, then spend 50 coins as fallback
     const useSkip = () => {
         if (progress.boosters.skips > 0) {
             setProgress(prev => ({
@@ -138,9 +148,15 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             }));
             return true;
         }
+        // Fallback: buy with coins
+        if (progress.coins >= 50) {
+            setProgress(prev => ({ ...prev, coins: prev.coins - 50 }));
+            return true;
+        }
         return false;
     };
 
+    // useExtraBottle: use stock first, then spend 40 coins as fallback
     const useExtraBottle = () => {
         if (progress.boosters.extraBottles > 0) {
             setProgress(prev => ({
@@ -149,7 +165,20 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             }));
             return true;
         }
+        // Fallback: buy with coins
+        if (progress.coins >= 40) {
+            setProgress(prev => ({ ...prev, coins: prev.coins - 40 }));
+            return true;
+        }
         return false;
+    };
+
+    // addBoosters: called by shop when user purchases booster packs
+    const addBoosters = (type: 'hints' | 'skips' | 'extraBottles', amount: number) => {
+        setProgress(prev => ({
+            ...prev,
+            boosters: { ...prev.boosters, [type]: prev.boosters[type] + amount }
+        }));
     };
 
     const claimDailyReward = (rewardType: 'coins' | 'hint' | 'skip' | 'extraBottle' | 'mystery', amount: number) => {
@@ -247,9 +276,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         setProgress(prev => ({ ...prev, activeTheme: themeId }));
     };
 
+    const setCountry = (country: string) => {
+        setProgress(prev => ({ ...prev, country }));
+    };
+
     return (
         <GameContext.Provider value={{
-            progress, updateProgress, completeLevel, useHint, useSkip, useExtraBottle, claimDailyReward, addCoins, spendCoins, skipLevel, isLoaded, completeDailyChallenge, unlockTheme, setActiveTheme
+            progress, updateProgress, completeLevel, useHint, useSkip, useExtraBottle, claimDailyReward, addCoins, spendCoins, addBoosters, skipLevel, isLoaded, completeDailyChallenge, unlockTheme, setActiveTheme, setCountry
         }}>
             {children}
         </GameContext.Provider>

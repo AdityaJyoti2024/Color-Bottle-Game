@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, Animated, ImageBackground, Image } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, RotateCcw, Undo, Lightbulb, Coins, SkipForward, Clock, PlusSquare } from 'lucide-react-native';
+import { ArrowLeft, RotateCcw, Undo, Lightbulb, Coins, SkipForward, Clock, PlusSquare, Gift } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { Bottle } from '../components/Bottle';
@@ -11,6 +11,7 @@ import { Bottle as BottleType } from '../types';
 import { LevelCompleteModal } from '../components/LevelCompleteModal';
 import { TimeoutModal } from '../components/TimeoutModal';
 import { soundManager } from '../utils/sound';
+import { RewardAdModal } from '../components/RewardAdModal';
 
 export default function GameScreen() {
     const router = useRouter();
@@ -27,6 +28,18 @@ export default function GameScreen() {
     const [moveHistory, setMoveHistory] = useState<BottleType[][]>([]);
     const [showComplete, setShowComplete] = useState(false);
     const [extraBottlesUsed, setExtraBottlesUsed] = useState(0);
+
+    const [adConfig, setAdConfig] = useState<{
+        visible: boolean;
+        type: 'coins' | 'hint' | 'skip' | 'extraBottle';
+        amount: number;
+        videoSource: any;
+    }>({
+        visible: false,
+        type: 'coins',
+        amount: 50,
+        videoSource: require('../assets/reel ads.mp4')
+    });
 
     // Timer
     const getInitialTime = (difficulty: string) => {
@@ -224,7 +237,13 @@ export default function GameScreen() {
             soundManager.play('pour'); // Or another custom sound
             handleNextLevel();
         } else {
-            soundManager.play('error');
+            // Fallback to Rewarded Ad
+            setAdConfig({
+                visible: true,
+                type: 'skip',
+                amount: 1,
+                videoSource: require('../assets/reel ads.mp4')
+            });
         }
     };
 
@@ -235,21 +254,34 @@ export default function GameScreen() {
         }
 
         if (useExtraBottle()) {
-            soundManager.play('pour');
-            const nextId = Math.max(...bottles.map(b => b.id), 0) + 1;
-            const newBottle: BottleType = {
-                id: nextId,
-                colors: [],
-                maxCapacity: 4
-            };
-            setBottles([...bottles, newBottle]);
-            setExtraBottlesUsed(prev => prev + 1);
+            performExtraBottleAction();
         } else {
-            soundManager.play('error');
+            // Fallback to Rewarded Ad
+            setAdConfig({
+                visible: true,
+                type: 'extraBottle',
+                amount: 1,
+                videoSource: require('../assets/600+ Ghibli Art Reels Bundle (1).mp4')
+            });
         }
     };
 
+    const performExtraBottleAction = () => {
+        soundManager.play('pour');
+        const nextId = Math.max(...bottles.map(b => b.id), 0) + 1;
+        const newBottle: BottleType = {
+            id: nextId,
+            colors: [],
+            maxCapacity: 4
+        };
+        setBottles([...bottles, newBottle]);
+        setExtraBottlesUsed(prev => prev + 1);
+    };
+
     const handleNextLevel = () => {
+        // Trigger interstitial ad after level completion
+        // adsManager.showInterstitialAd(); // Disabled for now to use our custom modal for rewards
+
         setShowComplete(false);
         const nextLevelId = levelId + 1;
         router.replace(`/game?id=${nextLevelId}`);
@@ -273,29 +305,46 @@ export default function GameScreen() {
             style={styles.container}
             resizeMode="cover"
         >
+            {/* Dark overlay for readability */}
+            <View style={styles.darkOverlay} />
+
             {/* Header */}
             <View style={styles.header}>
                 <Pressable
                     onPress={() => router.back()}
                     style={({ pressed }) => [styles.iconButton, pressed && { transform: [{ scale: 0.95 }] }]}
                 >
-                    <ArrowLeft size={24} color="#4A6CF7" />
+                    <ArrowLeft size={22} color="#FFD864" strokeWidth={2.5} />
+                </Pressable>
+
+                {/* Get Reward Button */}
+                <Pressable
+                    onPress={() => setAdConfig({
+                        visible: true,
+                        type: 'coins',
+                        amount: 100,
+                        videoSource: require('../assets/reel ads.mp4')
+                    })}
+                    style={({ pressed }) => [styles.getRewardBtn, pressed && { transform: [{ scale: 0.95 }] }]}
+                >
+                    <Gift size={18} color="#FFD864" strokeWidth={2.5} />
+                    <Text style={styles.getRewardText}>GET REWARD</Text>
                 </Pressable>
 
                 <View style={styles.headerTextContainer}>
-                    <Text style={styles.levelTitle}>Level {levelId}</Text>
-                    <Text style={styles.difficultyText}>{level.difficulty}</Text>
+                    <Text style={styles.levelTitle}>LEVEL {levelId}</Text>
+                    <Text style={styles.difficultyText}>{level.difficulty.toUpperCase()}</Text>
                 </View>
 
                 <View style={styles.headerRight}>
-                    <View style={[styles.coinsBadge, { marginRight: 8, backgroundColor: timeLeft <= 30 ? '#FEE2E2' : '#FFFFFF' }]}>
-                        <Clock size={20} color={timeLeft <= 30 ? '#FF4D4D' : '#4B5563'} />
-                        <Text style={[styles.coinsText, { color: timeLeft <= 30 ? '#FF4D4D' : '#4B5563' }]}>
+                    <View style={[styles.coinsBadge, { marginRight: 8, borderColor: timeLeft <= 30 ? '#FF4D4D' : 'rgba(255,216,100,0.35)' }]}>
+                        <Clock size={16} color={timeLeft <= 30 ? '#FF4D4D' : '#FFD864'} />
+                        <Text style={[styles.coinsText, { color: timeLeft <= 30 ? '#FF4D4D' : '#F5DEB3' }]}>
                             {formatTime(timeLeft)}
                         </Text>
                     </View>
                     <View style={styles.coinsBadge}>
-                        <Coins size={20} color="#FFD84D" />
+                        <Coins size={16} color="#FFD864" />
                         <Text style={styles.coinsText}>{progress.coins}</Text>
                     </View>
                 </View>
@@ -323,9 +372,11 @@ export default function GameScreen() {
 
             {/* Bottom Control Panel */}
             <Animated.View style={[styles.controlPanel, { transform: [{ translateY: panelTranslateY }] }]}>
+                {/* Wood panel top edge shine */}
+                <View style={styles.panelShine} />
                 <View style={styles.controlsGrid}>
 
-                    {/* Undo Button */}
+                    {/* Undo Button - disabled only if no move history */}
                     <Pressable
                         onPress={handleUndo}
                         disabled={moveHistory.length === 0}
@@ -336,72 +387,105 @@ export default function GameScreen() {
                             moveHistory.length > 0 && styles.woodCarvedShadow
                         ]}
                     >
-                        <Undo size={24} color={moveHistory.length === 0 ? '#9CA3AF' : '#8B5A2B'} />
+                        <Undo size={24} color={moveHistory.length === 0 ? 'rgba(255,255,255,0.2)' : '#FFD864'} />
                         <Text style={[styles.controlText, moveHistory.length === 0 ? styles.textDisabled : styles.textWoodDark]}>Undo</Text>
                     </Pressable>
 
-                    {/* Hint Button */}
-                    <Pressable
-                        onPress={handleHint}
-                        disabled={progress.boosters.hints === 0}
-                        style={({ pressed }) => [
-                            styles.controlItem,
-                            progress.boosters.hints === 0 ? styles.controlItemDisabled : styles.bgWoodLight,
-                            pressed && { transform: [{ scale: 0.95 }] },
-                            progress.boosters.hints > 0 && styles.woodCarvedShadow
-                        ]}
-                    >
-                        {progress.boosters.hints > 0 && (
-                            <View style={styles.hintBadge}>
-                                <Text style={styles.hintBadgeText}>{progress.boosters.hints}</Text>
-                            </View>
-                        )}
-                        <Lightbulb size={24} color={progress.boosters.hints === 0 ? '#9CA3AF' : '#8B5A2B'} />
-                        <Text style={[styles.controlText, progress.boosters.hints === 0 ? styles.textDisabled : styles.textWoodDark]}>Hint</Text>
-                    </Pressable>
+                    {/* Hint Button - enabled if has hints OR has ≥30 coins */}
+                    {(() => {
+                        const hasHints = progress.boosters.hints > 0;
+                        const canBuy = progress.coins >= 30;
+                        const enabled = hasHints || canBuy;
+                        return (
+                            <Pressable
+                                onPress={handleHint}
+                                disabled={!enabled}
+                                style={({ pressed }) => [
+                                    styles.controlItem,
+                                    !enabled ? styles.controlItemDisabled : styles.bgWoodLight,
+                                    pressed && { transform: [{ scale: 0.95 }] },
+                                    enabled && styles.woodCarvedShadow
+                                ]}
+                            >
+                                {hasHints ? (
+                                    <View style={[styles.hintBadge, { backgroundColor: '#FFB800' }]}>
+                                        <Text style={styles.hintBadgeText}>{progress.boosters.hints}</Text>
+                                    </View>
+                                ) : canBuy ? (
+                                    <View style={styles.coinCostBadge}>
+                                        <Text style={styles.coinCostText}>30🪙</Text>
+                                    </View>
+                                ) : null}
+                                <Lightbulb size={24} color={!enabled ? 'rgba(255,255,255,0.2)' : '#FFD864'} />
+                                <Text style={[styles.controlText, !enabled ? styles.textDisabled : styles.textWoodDark]}>Hint</Text>
+                            </Pressable>
+                        );
+                    })()}
 
-                    {/* Extra Bottle Button */}
-                    <Pressable
-                        onPress={handleExtraBottle}
-                        disabled={progress.boosters.extraBottles === 0 || extraBottlesUsed >= 2}
-                        style={({ pressed }) => [
-                            styles.controlItem,
-                            (progress.boosters.extraBottles === 0 || extraBottlesUsed >= 2) ? styles.controlItemDisabled : styles.bgWoodLight,
-                            pressed && { transform: [{ scale: 0.95 }] },
-                            (progress.boosters.extraBottles > 0 && extraBottlesUsed < 2) && styles.woodCarvedShadow
-                        ]}
-                    >
-                        {(progress.boosters.extraBottles > 0 && extraBottlesUsed < 2) && (
-                            <View style={[styles.hintBadge, { backgroundColor: '#4A6CF7' }]}>
-                                <Text style={styles.hintBadgeText}>{progress.boosters.extraBottles}</Text>
-                            </View>
-                        )}
-                        <PlusSquare size={24} color={(progress.boosters.extraBottles === 0 || extraBottlesUsed >= 2) ? '#9CA3AF' : '#8B5A2B'} />
-                        <Text style={[styles.controlText, (progress.boosters.extraBottles === 0 || extraBottlesUsed >= 2) ? styles.textDisabled : styles.textWoodDark]}>+Bottle</Text>
-                        <Text style={[styles.controlSubtext, (progress.boosters.extraBottles === 0 || extraBottlesUsed >= 2) ? styles.textDisabled : styles.textWoodDark]}>{extraBottlesUsed}/2</Text>
-                    </Pressable>
+                    {/* Extra Bottle - enabled if has stock OR has ≥40 coins, max 2 */}
+                    {(() => {
+                        const hasBottle = progress.boosters.extraBottles > 0 && extraBottlesUsed < 2;
+                        const canBuy = progress.coins >= 40 && extraBottlesUsed < 2;
+                        const enabled = hasBottle || canBuy;
+                        return (
+                            <Pressable
+                                onPress={handleExtraBottle}
+                                disabled={!enabled}
+                                style={({ pressed }) => [
+                                    styles.controlItem,
+                                    !enabled ? styles.controlItemDisabled : styles.bgWoodLight,
+                                    pressed && { transform: [{ scale: 0.95 }] },
+                                    enabled && styles.woodCarvedShadow
+                                ]}
+                            >
+                                {hasBottle ? (
+                                    <View style={[styles.hintBadge, { backgroundColor: '#4ECDC4' }]}>
+                                        <Text style={styles.hintBadgeText}>{progress.boosters.extraBottles}</Text>
+                                    </View>
+                                ) : canBuy ? (
+                                    <View style={styles.coinCostBadge}>
+                                        <Text style={styles.coinCostText}>40🪙</Text>
+                                    </View>
+                                ) : null}
+                                <PlusSquare size={24} color={!enabled ? 'rgba(255,255,255,0.2)' : '#FFD864'} />
+                                <Text style={[styles.controlText, !enabled ? styles.textDisabled : styles.textWoodDark]}>+Bottle</Text>
+                                <Text style={[styles.controlSubtext, !enabled ? styles.textDisabled : styles.textWoodDark]}>{extraBottlesUsed}/2</Text>
+                            </Pressable>
+                        );
+                    })()}
 
-                    {/* Skip Button */}
-                    <Pressable
-                        onPress={handleSkip}
-                        disabled={progress.boosters.skips === 0}
-                        style={({ pressed }) => [
-                            styles.controlItem,
-                            progress.boosters.skips === 0 ? styles.controlItemDisabled : styles.bgWoodLight,
-                            pressed && { transform: [{ scale: 0.95 }] },
-                            progress.boosters.skips > 0 && styles.woodCarvedShadow
-                        ]}
-                    >
-                        {progress.boosters.skips > 0 && (
-                            <View style={[styles.hintBadge, { backgroundColor: '#B84DFF' }]}>
-                                <Text style={styles.hintBadgeText}>{progress.boosters.skips}</Text>
-                            </View>
-                        )}
-                        <SkipForward size={24} color={progress.boosters.skips === 0 ? '#9CA3AF' : '#8B5A2B'} />
-                        <Text style={[styles.controlText, progress.boosters.skips === 0 ? styles.textDisabled : styles.textWoodDark]}>Skip</Text>
-                    </Pressable>
+                    {/* Skip Button - enabled if has skips OR has ≥50 coins */}
+                    {(() => {
+                        const hasSkip = progress.boosters.skips > 0;
+                        const canBuy = progress.coins >= 50;
+                        const enabled = hasSkip || canBuy;
+                        return (
+                            <Pressable
+                                onPress={handleSkip}
+                                disabled={!enabled}
+                                style={({ pressed }) => [
+                                    styles.controlItem,
+                                    !enabled ? styles.controlItemDisabled : styles.bgWoodLight,
+                                    pressed && { transform: [{ scale: 0.95 }] },
+                                    enabled && styles.woodCarvedShadow
+                                ]}
+                            >
+                                {hasSkip ? (
+                                    <View style={[styles.hintBadge, { backgroundColor: '#B84DFF' }]}>
+                                        <Text style={styles.hintBadgeText}>{progress.boosters.skips}</Text>
+                                    </View>
+                                ) : canBuy ? (
+                                    <View style={styles.coinCostBadge}>
+                                        <Text style={styles.coinCostText}>50🪙</Text>
+                                    </View>
+                                ) : null}
+                                <SkipForward size={24} color={!enabled ? 'rgba(255,255,255,0.2)' : '#FFD864'} />
+                                <Text style={[styles.controlText, !enabled ? styles.textDisabled : styles.textWoodDark]}>Skip</Text>
+                            </Pressable>
+                        );
+                    })()}
 
-                    {/* Restart Button */}
+                    {/* Restart Button - always enabled */}
                     <Pressable
                         onPress={handleRestart}
                         style={({ pressed }) => [
@@ -411,7 +495,7 @@ export default function GameScreen() {
                             styles.woodCarvedShadow
                         ]}
                     >
-                        <RotateCcw size={24} color="#8B5A2B" />
+                        <RotateCcw size={24} color="#FFD864" />
                         <Text style={[styles.controlText, styles.textWoodDark]}>Restart</Text>
                     </Pressable>
 
@@ -433,6 +517,23 @@ export default function GameScreen() {
                 onRestart={handleTimeoutRestart}
             />
 
+            {/* Reward Ad Modal */}
+            <RewardAdModal
+                visible={adConfig.visible}
+                rewardType={adConfig.type}
+                rewardAmount={adConfig.amount}
+                videoSource={adConfig.videoSource}
+                onClose={() => {
+                    setAdConfig(prev => ({ ...prev, visible: false }));
+                    // If it was a booster reward, handle the action
+                    if (adConfig.type === 'skip') {
+                        handleNextLevel();
+                    } else if (adConfig.type === 'extraBottle') {
+                        performExtraBottleAction();
+                    }
+                }}
+            />
+
         </ImageBackground>
     );
 }
@@ -442,61 +543,81 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
     },
+    darkOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(15, 5, 0, 0.52)',
+    },
     container: {
         flex: 1,
-        paddingTop: 60,
+        paddingTop: 56,
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 24,
-        marginBottom: 16,
+        paddingHorizontal: 16,
+        marginBottom: 12,
     },
     iconButton: {
-        width: 48,
-        height: 48,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 24,
+        width: 44,
+        height: 44,
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        borderRadius: 13,
+        borderWidth: 1.5,
+        borderColor: 'rgba(255,216,100,0.35)',
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 10,
-        elevation: 3,
+    },
+    getRewardBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255, 216, 100, 0.15)',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 12,
+        borderWidth: 1.5,
+        borderColor: '#FFD864',
+        gap: 6,
+    },
+    getRewardText: {
+        color: '#FFD864',
+        fontSize: 11,
+        fontWeight: '900',
+        letterSpacing: 0.5,
     },
     headerTextContainer: {
         alignItems: 'center',
     },
     levelTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#4A6CF7',
+        fontSize: 22,
+        fontWeight: '900',
+        color: '#F5DEB3',
+        letterSpacing: 2,
+        textShadowColor: 'rgba(0,0,0,0.6)',
+        textShadowOffset: { width: 0, height: 2 },
+        textShadowRadius: 4,
     },
     difficultyText: {
-        fontSize: 14,
-        color: '#6B7280',
-        textTransform: 'capitalize',
+        fontSize: 11,
+        color: '#FFD864',
+        fontWeight: '700',
+        letterSpacing: 1.5,
     },
     coinsBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#FFFFFF',
-        paddingHorizontal: 16,
-        paddingVertical: 8,
-        borderRadius: 9999,
-        gap: 8,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 10,
-        elevation: 3,
+        backgroundColor: 'rgba(0,0,0,0.45)',
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 12,
+        gap: 5,
+        borderWidth: 1.5,
+        borderColor: 'rgba(255,216,100,0.35)',
     },
     coinsText: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#4A6CF7',
+        fontSize: 14,
+        fontWeight: '800',
+        color: '#F5DEB3',
     },
     gridContainer: {
         flex: 1,
@@ -529,17 +650,30 @@ const styles = StyleSheet.create({
     bottleWrapper: {
         margin: 8,
     },
-    controlPanel: {
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    panelShine: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 2,
+        backgroundColor: 'rgba(255, 220, 160, 0.4)',
         borderTopLeftRadius: 32,
         borderTopRightRadius: 32,
-        padding: 24,
-        paddingBottom: 40,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -10 },
-        shadowOpacity: 0.1,
-        shadowRadius: 20,
-        elevation: 10,
+    },
+    controlPanel: {
+        backgroundColor: '#8B4F1E',
+        borderTopLeftRadius: 32,
+        borderTopRightRadius: 32,
+        padding: 20,
+        paddingBottom: 36,
+        shadowColor: '#1A0500',
+        shadowOffset: { width: 0, height: -8 },
+        shadowOpacity: 0.5,
+        shadowRadius: 16,
+        elevation: 12,
+        position: 'relative',
+        borderTopWidth: 2,
+        borderTopColor: 'rgba(200,133,74,0.6)',
     },
     controlsGrid: {
         flexDirection: 'row',
@@ -554,12 +688,12 @@ const styles = StyleSheet.create({
         gap: 4,
     },
     controlItemDisabled: {
-        backgroundColor: '#E5E7EB',
+        backgroundColor: 'rgba(255,255,255,0.1)',
     },
     bgWoodLight: {
-        backgroundColor: '#D8B384',
+        backgroundColor: '#C8854A',
         borderWidth: 2,
-        borderColor: '#8B5A2B',
+        borderColor: 'rgba(255,220,160,0.4)',
     },
     woodCarvedShadow: {
         shadowColor: '#3d1b04',
@@ -583,8 +717,8 @@ const styles = StyleSheet.create({
     },
     textWhite: { color: '#FFF' },
     textDark: { color: '#111827' },
-    textDisabled: { color: '#9CA3AF' },
-    textWoodDark: { color: '#8B5A2B' },
+    textDisabled: { color: 'rgba(255,255,255,0.3)' },
+    textWoodDark: { color: '#FFD864' },
     hintBadge: {
         position: 'absolute',
         top: -4,
@@ -596,6 +730,21 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 10,
+    },
+    coinCostBadge: {
+        position: 'absolute',
+        top: -4,
+        right: -4,
+        backgroundColor: '#FFD864',
+        paddingHorizontal: 5,
+        paddingVertical: 2,
+        borderRadius: 8,
+        zIndex: 10,
+    },
+    coinCostText: {
+        color: '#3A1500',
+        fontSize: 8,
+        fontWeight: '900',
     },
     hintBadgeText: {
         color: '#FFF',

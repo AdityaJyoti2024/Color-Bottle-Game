@@ -33,4 +33,5 @@ export interface GameProgress {
     rewardClaimedToday: boolean;
     unlockedThemes: string[];
     activeTheme: string;
+    country?: string;
 }

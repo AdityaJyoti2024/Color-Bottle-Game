@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, Animated, Modal, TextInput, ImageBackground } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Animated, Modal, TextInput, ImageBackground, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, User, Star as StarIcon, Trophy, Coins, Settings, Bell, CircleHelp, Edit3, X } from 'lucide-react-native';
+import { ArrowLeft, User, Star as StarIcon, Trophy, Coins, Settings, Bell, CircleHelp, Edit3, X, Mail, Star } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGame } from '../context/GameContext';
 
@@ -12,6 +12,19 @@ export default function ProfileScreen() {
     const [isEditing, setIsEditing] = useState(false);
     const [editName, setEditName] = useState(progress.username);
     const [editAvatar, setEditAvatar] = useState(progress.avatar);
+
+    const openLink = async (url: string) => {
+        try {
+            const supported = await Linking.canOpenURL(url);
+            if (supported) {
+                await Linking.openURL(url);
+            } else {
+                console.error("Don't know how to open URI: " + url);
+            }
+        } catch (error) {
+            console.error("An error occurred", error);
+        }
+    };
 
     const AVATARS = ['🐶', '🐱', '🦊', '🐼', '🦁', '🐸', '🐵', '🦄', '🦇', '🦉'];
 
@@ -36,15 +49,17 @@ export default function ProfileScreen() {
 
     return (
         <ImageBackground source={require('../assets/orange-wall-bg.jpg')} style={styles.container} resizeMode="cover">
+            {/* Dark wood overlay */}
+            <View style={styles.darkOverlay} />
             {/* Header */}
             <View style={styles.header}>
                 <Pressable
                     onPress={() => router.back()}
                     style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
                 >
-                    <ArrowLeft size={24} color="#4A6CF7" />
+                    <ArrowLeft size={22} color="#FFD864" strokeWidth={2.5} />
                 </Pressable>
-                <Text style={styles.headerTitle}>Profile</Text>
+                <Text style={styles.headerTitle}>👤  PROFILE</Text>
                 <View style={styles.spacer} />
             </View>
 
@@ -100,31 +115,29 @@ export default function ProfileScreen() {
                     </View>
                 </Animated.View>
 
-                {/* Settings Menu Options */}
+                {/* Menu Options */}
                 <Animated.View style={[styles.menuSection, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-                    <Text style={styles.sectionTitle}>Settings</Text>
+                    <Text style={styles.sectionTitle}>Options</Text>
 
-                    <Pressable style={({ pressed }) => [styles.menuItem, pressed && styles.menuItemPressed]}>
-                        <View style={[styles.menuIconBg, { backgroundColor: '#F3F4F6' }]}>
-                            <Settings size={20} color="#4B5563" />
-                        </View>
-                        <Text style={styles.menuText}>App Settings</Text>
-                        <ArrowLeft size={16} color="#9CA3AF" style={styles.arrowRotated} />
-                    </Pressable>
-
-                    <Pressable style={({ pressed }) => [styles.menuItem, pressed && styles.menuItemPressed]}>
+                    <Pressable 
+                        style={({ pressed }) => [styles.menuItem, pressed && styles.menuItemPressed]}
+                        onPress={() => openLink('https://forms.gle/zaJhbCH693y38nFy9')}
+                    >
                         <View style={[styles.menuIconBg, { backgroundColor: '#FEF3C7' }]}>
-                            <Bell size={20} color="#D97706" />
+                            <Star size={20} color="#D97706" />
                         </View>
-                        <Text style={styles.menuText}>Notifications</Text>
+                        <Text style={styles.menuText}>⭐ Give Feedback</Text>
                         <ArrowLeft size={16} color="#9CA3AF" style={styles.arrowRotated} />
                     </Pressable>
 
-                    <Pressable style={({ pressed }) => [styles.menuItem, styles.menuItemLast, pressed && styles.menuItemPressed]}>
+                    <Pressable 
+                        style={({ pressed }) => [styles.menuItem, styles.menuItemLast, pressed && styles.menuItemPressed]}
+                        onPress={() => openLink('mailto:adityajyotisri24@gmail.com')}
+                    >
                         <View style={[styles.menuIconBg, { backgroundColor: '#DBEAFE' }]}>
-                            <CircleHelp size={20} color="#2563EB" />
+                            <Mail size={20} color="#2563EB" />
                         </View>
-                        <Text style={styles.menuText}>Help & Support</Text>
+                        <Text style={styles.menuText}>📩 Contact Support</Text>
                         <ArrowLeft size={16} color="#9CA3AF" style={styles.arrowRotated} />
                     </Pressable>
                 </Animated.View>
@@ -182,56 +195,63 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
+    darkOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(15, 5, 0, 0.55)',
+    },
     container: {
         flex: 1,
-        paddingTop: 60,
+        paddingTop: 56,
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 24,
+        paddingHorizontal: 16,
         marginBottom: 16,
     },
     backButton: {
-        width: 48,
-        height: 48,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 24,
+        width: 44,
+        height: 44,
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        borderRadius: 13,
+        borderWidth: 1.5,
+        borderColor: 'rgba(255,216,100,0.35)',
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 10,
-        elevation: 3,
     },
     backButtonPressed: {
         transform: [{ scale: 0.9 }],
     },
     headerTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#4A6CF7',
+        fontSize: 20,
+        fontWeight: '900',
+        color: '#F5DEB3',
+        letterSpacing: 2,
+        textShadowColor: 'rgba(0,0,0,0.6)',
+        textShadowOffset: { width: 0, height: 2 },
+        textShadowRadius: 4,
     },
     spacer: {
-        width: 48,
+        width: 44,
     },
     scrollContent: {
-        paddingHorizontal: 24,
+        paddingHorizontal: 16,
         paddingBottom: 40,
     },
     userCard: {
         alignItems: 'center',
-        backgroundColor: '#FFFFFF',
-        padding: 32,
+        backgroundColor: 'rgba(139, 79, 30, 0.85)',
+        padding: 28,
         borderRadius: 24,
-        marginBottom: 24,
-        shadowColor: '#000',
+        marginBottom: 20,
+        borderWidth: 1.5,
+        borderColor: 'rgba(255,220,160,0.25)',
+        shadowColor: '#1A0500',
         shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.05,
-        shadowRadius: 15,
-        elevation: 4,
+        shadowOpacity: 0.5,
+        shadowRadius: 16,
+        elevation: 8,
     },
     avatarGradient: {
         width: 96,
@@ -239,85 +259,97 @@ const styles = StyleSheet.create({
         borderRadius: 48,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 16,
+        marginBottom: 14,
     },
     userName: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#111827',
+        fontSize: 22,
+        fontWeight: '900',
+        color: '#F5DEB3',
         marginBottom: 4,
+        textShadowColor: 'rgba(0,0,0,0.5)',
+        textShadowOffset: { width: 0, height: 2 },
+        textShadowRadius: 4,
     },
     userSubtitle: {
-        fontSize: 14,
-        color: '#6B7280',
+        fontSize: 13,
+        color: '#FFD864',
+        fontWeight: '600',
+        letterSpacing: 0.5,
     },
     statsGrid: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 24,
+        marginBottom: 20,
     },
     statBox: {
         flex: 1,
-        backgroundColor: '#FFFFFF',
-        padding: 16,
-        borderRadius: 20,
+        backgroundColor: 'rgba(139, 79, 30, 0.8)',
+        padding: 14,
+        borderRadius: 18,
         alignItems: 'center',
         marginHorizontal: 4,
-        shadowColor: '#000',
+        borderWidth: 1.5,
+        borderColor: 'rgba(255,220,160,0.2)',
+        shadowColor: '#1A0500',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-        elevation: 2,
+        shadowOpacity: 0.4,
+        shadowRadius: 8,
+        elevation: 4,
     },
     statIconBg: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
         justifyContent: 'center',
         alignItems: 'center',
-        marginBottom: 12,
+        marginBottom: 10,
     },
     statValue: {
         fontSize: 20,
-        fontWeight: 'bold',
-        color: '#111827',
+        fontWeight: '900',
+        color: '#FFD864',
         marginBottom: 4,
     },
     statLabel: {
-        fontSize: 12,
-        color: '#6B7280',
-        fontWeight: '500',
+        fontSize: 11,
+        color: '#F5DEB3',
+        fontWeight: '600',
+        opacity: 0.8,
     },
     menuSection: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 24,
+        backgroundColor: 'rgba(139, 79, 30, 0.85)',
+        borderRadius: 22,
         padding: 8,
-        shadowColor: '#000',
+        borderWidth: 1.5,
+        borderColor: 'rgba(255,220,160,0.2)',
+        shadowColor: '#1A0500',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-        elevation: 2,
+        shadowOpacity: 0.4,
+        shadowRadius: 8,
+        elevation: 4,
     },
     sectionTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#111827',
+        fontSize: 13,
+        fontWeight: '900',
+        color: '#FFD864',
         paddingHorizontal: 16,
         paddingTop: 16,
         paddingBottom: 8,
+        letterSpacing: 1,
+        textTransform: 'uppercase',
     },
     menuItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 16,
+        padding: 14,
         borderBottomWidth: 1,
-        borderBottomColor: '#F3F4F6',
+        borderBottomColor: 'rgba(255,220,160,0.12)',
     },
     menuItemLast: {
         borderBottomWidth: 0,
     },
     menuItemPressed: {
-        backgroundColor: '#F9FAFB',
+        backgroundColor: 'rgba(255,220,160,0.1)',
         borderRadius: 12,
     },
     menuIconBg: {
@@ -326,24 +358,26 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 16,
+        marginRight: 14,
     },
     menuText: {
         flex: 1,
-        fontSize: 16,
-        color: '#374151',
-        fontWeight: '500',
+        fontSize: 15,
+        color: '#F5DEB3',
+        fontWeight: '600',
     },
     arrowRotated: {
         transform: [{ rotate: '180deg' }],
     },
     editButtonOuter: {
         position: 'absolute',
-        top: 16,
-        right: 16,
-        backgroundColor: '#F3F4F6',
+        top: 14,
+        right: 14,
+        backgroundColor: 'rgba(255,220,160,0.2)',
         padding: 8,
-        borderRadius: 20,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,220,160,0.3)',
     },
     modalOverlay: {
         flex: 1,

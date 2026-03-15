@@ -1,23 +1,42 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Switch, ScrollView, ImageBackground } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Switch, ScrollView, ImageBackground, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Volume2, Bell, CircleHelp, ShieldAlert, FileText, ChevronRight, Palette } from 'lucide-react-native';
+import { ArrowLeft, Volume2, Bell, CircleHelp, ShieldAlert, FileText, ChevronRight, Palette, Star, Mail, Globe } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useGame } from '../context/GameContext';
+import { CountryPickerModal } from '../components/CountryPickerModal';
 
 export default function SettingsScreen() {
     const router = useRouter();
+    const { progress, setCountry } = useGame();
     const [soundEnabled, setSoundEnabled] = useState(true);
     const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+    const [showCountryPicker, setShowCountryPicker] = useState(false);
 
     const toggleSound = () => setSoundEnabled(prev => !prev);
     const toggleNotifications = () => setNotificationsEnabled(prev => !prev);
 
+    const openLink = async (url: string) => {
+        try {
+            const supported = await Linking.canOpenURL(url);
+            if (supported) {
+                await Linking.openURL(url);
+            } else {
+                console.error("Don't know how to open URI: " + url);
+            }
+        } catch (error) {
+            console.error("An error occurred", error);
+        }
+    };
+
+    const handlePrivacyPolicy = () => {
+        openLink('https://github.com/AdityaJyoti2002/Privacy-Policy/blob/main/Privacy.md');
+    };
+
     return (
         <ImageBackground source={require('../assets/orange-wall-bg.jpg')} style={styles.container} resizeMode="cover">
-            <LinearGradient
-                colors={['rgba(74, 108, 247, 0.1)', 'rgba(74, 108, 247, 0.05)', '#F5F7FF']}
-                style={StyleSheet.absoluteFill}
-            />
+            {/* Dark wood overlay */}
+            <View style={styles.darkOverlay} />
 
             {/* Header */}
             <View style={styles.header}>
@@ -25,9 +44,9 @@ export default function SettingsScreen() {
                     onPress={() => router.back()}
                     style={({ pressed }) => [styles.backButton, pressed && styles.backButtonPressed]}
                 >
-                    <ArrowLeft size={24} color="#4A6CF7" />
+                    <ArrowLeft size={22} color="#FFD864" strokeWidth={2.5} />
                 </Pressable>
-                <Text style={styles.headerTitle}>Settings</Text>
+                <Text style={styles.headerTitle}>⚙️  SETTINGS</Text>
                 <View style={styles.spacer} />
             </View>
 
@@ -70,15 +89,35 @@ export default function SettingsScreen() {
 
                     <View style={styles.divider} />
 
-                    <Pressable
+                    <View style={styles.row}>
+                        <View style={styles.rowLeft}>
+                            <View style={[styles.iconBg, { backgroundColor: '#DCFCE7' }]}>
+                                <Globe size={20} color="#16A34A" />
+                            </View>
+                            <View>
+                                <Text style={styles.rowText}>Ad Region</Text>
+                                <Text style={styles.rowSubtext}>{progress.country || 'Not Set'}</Text>
+                            </View>
+                        </View>
+                        <Pressable 
+                            style={styles.changeBtn}
+                            onPress={() => setShowCountryPicker(true)}
+                        >
+                            <Text style={styles.changeBtnText}>Change</Text>
+                        </Pressable>
+                    </View>
+
+                    <View style={styles.divider} />
+
+                    <Pressable 
                         style={({ pressed }) => [styles.navRow, pressed && styles.navRowPressed]}
-                        onPress={() => router.push('/themes')}
+                        onPress={() => openLink('https://forms.gle/zaJhbCH693y38nFy9')}
                     >
                         <View style={styles.rowLeft}>
-                            <View style={[styles.iconBg, { backgroundColor: '#FCE7F3' }]}>
-                                <Palette size={20} color="#EC4899" />
+                            <View style={[styles.iconBg, { backgroundColor: '#FEF3C7' }]}>
+                                <Star size={20} color="#D97706" />
                             </View>
-                            <Text style={styles.rowText}>Bottle Themes & Shop</Text>
+                            <Text style={styles.rowText}>⭐ Give Feedback</Text>
                         </View>
                         <ChevronRight size={20} color="#9CA3AF" />
                     </Pressable>
@@ -87,49 +126,27 @@ export default function SettingsScreen() {
                 {/* Support & Links */}
                 <Text style={styles.sectionHeader}>Support</Text>
                 <View style={styles.card}>
-                    <Pressable
+                    <View style={styles.supportHeader}>
+                        <Mail size={20} color="#FFD864" style={{ marginRight: 10 }} />
+                        <Text style={styles.supportTitle}>📩 Contact Support</Text>
+                    </View>
+                    <View style={styles.supportBody}>
+                        <Text style={styles.supportText}>Still need help?</Text>
+                        <Text style={styles.supportSubtext}>You can contact us anytime.</Text>
+                        <Pressable 
+                            onPress={() => openLink('mailto:adityajyotisri24@gmail.com')}
+                            style={styles.emailContainer}
+                        >
+                            <Text style={styles.emailText}>Email: adityajyotisri24@gmail.com</Text>
+                        </Pressable>
+                    </View>
+
+                    <View style={styles.divider} />
+
+                    <Pressable 
                         style={({ pressed }) => [styles.navRow, pressed && styles.navRowPressed]}
-                        onPress={() => router.push('/notifications')}
+                        onPress={handlePrivacyPolicy}
                     >
-                        <View style={styles.rowLeft}>
-                            <View style={[styles.iconBg, { backgroundColor: '#DBEAFE' }]}>
-                                <Bell size={20} color="#3B82F6" />
-                            </View>
-                            <Text style={styles.rowText}>Notification Center</Text>
-                        </View>
-                        <ChevronRight size={20} color="#9CA3AF" />
-                    </Pressable>
-
-                    <View style={styles.divider} />
-
-                    <Pressable
-                        style={({ pressed }) => [styles.navRow, pressed && styles.navRowPressed]}
-                        onPress={() => router.push('/help')}
-                    >
-                        <View style={styles.rowLeft}>
-                            <View style={[styles.iconBg, { backgroundColor: '#D1FAE5' }]}>
-                                <CircleHelp size={20} color="#10B981" />
-                            </View>
-                            <Text style={styles.rowText}>Help & How to Play</Text>
-                        </View>
-                        <ChevronRight size={20} color="#9CA3AF" />
-                    </Pressable>
-
-                    <View style={styles.divider} />
-
-                    <Pressable style={({ pressed }) => [styles.navRow, pressed && styles.navRowPressed]}>
-                        <View style={styles.rowLeft}>
-                            <View style={[styles.iconBg, { backgroundColor: '#F3F4F6' }]}>
-                                <FileText size={20} color="#4B5563" />
-                            </View>
-                            <Text style={styles.rowText}>Terms of Service</Text>
-                        </View>
-                        <ChevronRight size={20} color="#9CA3AF" />
-                    </Pressable>
-
-                    <View style={styles.divider} />
-
-                    <Pressable style={({ pressed }) => [styles.navRow, pressed && styles.navRowPressed]}>
                         <View style={styles.rowLeft}>
                             <View style={[styles.iconBg, { backgroundColor: '#FEE2E2' }]}>
                                 <ShieldAlert size={20} color="#EF4444" />
@@ -144,69 +161,87 @@ export default function SettingsScreen() {
                 <Text style={styles.versionText}>Color Bottle Game v1.0.0</Text>
 
             </ScrollView>
+
+            <CountryPickerModal 
+                visible={showCountryPicker}
+                onSelect={(country) => {
+                    setCountry(country);
+                    setShowCountryPicker(false);
+                }}
+            />
         </ImageBackground>
     );
 }
 
 const styles = StyleSheet.create({
+    darkOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(15, 5, 0, 0.52)',
+    },
     container: {
         flex: 1,
-        paddingTop: 60,
+        paddingTop: 56,
     },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 24,
+        paddingHorizontal: 16,
         marginBottom: 24,
     },
     backButton: {
-        width: 48,
-        height: 48,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 24,
+        width: 44,
+        height: 44,
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        borderRadius: 13,
+        borderWidth: 1.5,
+        borderColor: 'rgba(255,216,100,0.35)',
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 10,
-        elevation: 3,
     },
     backButtonPressed: {
         transform: [{ scale: 0.9 }],
     },
     headerTitle: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#111827',
+        fontSize: 20,
+        fontWeight: '900',
+        color: '#F5DEB3',
+        letterSpacing: 2,
+        textShadowColor: 'rgba(0,0,0,0.6)',
+        textShadowOffset: { width: 0, height: 2 },
+        textShadowRadius: 4,
     },
     spacer: {
-        width: 48,
+        width: 44,
     },
     content: {
-        paddingHorizontal: 24,
+        paddingHorizontal: 16,
         paddingBottom: 40,
     },
     sectionHeader: {
-        fontSize: 14,
-        fontWeight: 'bold',
-        color: '#6B7280',
+        fontSize: 11,
+        fontWeight: '800',
+        color: '#FFD864',
         textTransform: 'uppercase',
-        letterSpacing: 1,
-        marginBottom: 12,
-        marginLeft: 8,
+        letterSpacing: 2,
+        marginBottom: 10,
+        marginLeft: 4,
+        textShadowColor: 'rgba(0,0,0,0.5)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 2,
     },
     card: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 24,
+        backgroundColor: 'rgba(139, 79, 30, 0.85)',
+        borderRadius: 22,
         padding: 8,
-        marginBottom: 32,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-        elevation: 2,
+        marginBottom: 28,
+        borderWidth: 1.5,
+        borderColor: 'rgba(255,220,160,0.25)',
+        shadowColor: '#1A0500',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.5,
+        shadowRadius: 12,
+        elevation: 6,
     },
     row: {
         flexDirection: 'row',
@@ -224,7 +259,7 @@ const styles = StyleSheet.create({
         borderRadius: 16,
     },
     navRowPressed: {
-        backgroundColor: '#F9FAFB',
+        backgroundColor: 'rgba(255,220,160,0.1)',
     },
     rowLeft: {
         flexDirection: 'row',
@@ -239,19 +274,78 @@ const styles = StyleSheet.create({
         marginRight: 16,
     },
     rowText: {
-        fontSize: 16,
-        fontWeight: '500',
-        color: '#374151',
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#F5DEB3',
     },
     divider: {
         height: 1,
-        backgroundColor: '#F3F4F6',
+        backgroundColor: 'rgba(255,220,160,0.15)',
         marginHorizontal: 16,
     },
     versionText: {
         textAlign: 'center',
-        color: '#9CA3AF',
-        fontSize: 14,
+        color: 'rgba(245,222,179,0.5)',
+        fontSize: 13,
         marginTop: 16,
+    },
+    supportHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingTop: 16,
+        paddingBottom: 8,
+    },
+    supportTitle: {
+        fontSize: 15,
+        fontWeight: '800',
+        color: '#FFD864',
+    },
+    supportBody: {
+        paddingHorizontal: 16,
+        paddingBottom: 16,
+    },
+    supportText: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#F5DEB3',
+        marginBottom: 4,
+    },
+    supportSubtext: {
+        fontSize: 13,
+        color: '#F5DEB3',
+        opacity: 0.7,
+        marginBottom: 12,
+    },
+    emailContainer: {
+        backgroundColor: 'rgba(0,0,0,0.2)',
+        padding: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,216,100,0.2)',
+    },
+    emailText: {
+        color: '#FFD864',
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    rowSubtext: {
+        fontSize: 12,
+        color: '#F5DEB3',
+        opacity: 0.6,
+        marginTop: 2,
+    },
+    changeBtn: {
+        backgroundColor: 'rgba(255,216,100,0.2)',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: 'rgba(255,216,100,0.3)',
+    },
+    changeBtnText: {
+        color: '#FFD864',
+        fontSize: 12,
+        fontWeight: '700',
     },
 });
